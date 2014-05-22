@@ -1,3 +1,12 @@
+/**
+ * This is a simple example to show how to use the virtual device.
+ * This sample will open an existed real device, read the depth frame with listener,
+ * then copy to the virtual device.
+ *
+ * http://viml.nchc.org.tw/home/
+ */
+
+#pragma region Header Files
 // STL Header
 #include <algorithm>
 #include <iostream>
@@ -7,6 +16,7 @@
 // OpenNI Header
 #include <OpenNI.h>
 #include <PS1080.h>
+#pragma endregion
 
 using namespace std;
 using namespace openni;
