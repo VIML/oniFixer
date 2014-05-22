@@ -14,13 +14,10 @@ using namespace openni;
 #define GET_VIRTUAL_STREAM_IMAGE	100000
 #define SET_VIRTUAL_STREAM_IMAGE	100001
 
+// The class hanlde OpenNI Device, VideoStream
 class CNIDevice
 {
 public:
-	CNIDevice()
-	{
-	}
-
 	bool OpenDevice( const char* sURI, bool bDepthOnly = false )
 	{
 		if( sURI == NULL )
@@ -208,6 +205,7 @@ protected:
 	vector<CProperty>	vProperties;
 };
 
+// Copy basic properties between VideoStream
 void CopyGeneralProperties( const VideoStream& rSource, VideoStream& rTarget )
 {
 	rTarget.setVideoMode( rSource.getVideoMode() );
@@ -336,6 +334,7 @@ int main( int argc, char** argv )
 	int iDepth = 0;
 	while( true )
 	{
+		// just seek by depth videostream
 		pPlay->seek( mOniFile.vsDepth, ++iDepth );
 
 		cout << "." << flush;
