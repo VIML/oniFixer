@@ -1,5 +1,4 @@
 // STL Header
-#include <array>
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -14,6 +13,79 @@ using namespace openni;
 
 #define GET_VIRTUAL_STREAM_IMAGE	100000
 #define SET_VIRTUAL_STREAM_IMAGE	100001
+
+class CNIDevice
+{
+public:
+	CNIDevice()
+	{
+	}
+
+	bool OpenDevice( const char* sURI, bool bDepthOnly = false )
+	{
+		if( sURI == NULL )
+			cout << "Try to open any device" << endl;
+		else
+			cout << "Open the Device: " << sURI << endl;
+
+		if( mDeivce.open( sURI ) != STATUS_OK )
+		{
+			cerr << "Can't open source file: " << OpenNI::getExtendedError() << endl;
+			return false;
+		}
+
+		// Create depth stream
+		if( mDeivce.hasSensor( SENSOR_DEPTH ) )
+		{
+			if( vsDepth.create( mDeivce, SENSOR_DEPTH ) != STATUS_OK )
+			{
+				cerr << "Can't create depth stream: " << OpenNI::getExtendedError() << endl;
+				return false;
+			}
+		}
+		else
+		{
+			cerr << "ERROR: This source file does not have depth sensor" << endl;
+			return false;
+		}
+
+		// create color stream, optional
+		if( !bDepthOnly && mDeivce.hasSensor( SENSOR_COLOR ) )
+		{
+			if( vsColor.create( mDeivce, SENSOR_COLOR ) != STATUS_OK )
+			{
+				cerr << "Can't create color stream: " << OpenNI::getExtendedError() << endl;
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void Close()
+	{
+		if( vsDepth.isValid() )
+			vsDepth.destroy();
+
+		if( vsColor.isValid() )
+			vsDepth.destroy();
+
+		mDeivce.close();
+	}
+
+	void Start()
+	{
+		if( vsDepth.isValid() )
+			vsDepth.start();
+
+		if( vsColor.isValid() )
+			vsDepth.start();
+	}
+
+public:
+	Device		mDeivce;
+	VideoStream	vsDepth;
+	VideoStream	vsColor;
+};
 
 // the NewFrameListener
 class CFrameCopy : public VideoStream::NewFrameListener
@@ -56,16 +128,15 @@ class CNiTEProperty
 public:
 	CNiTEProperty()
 	{
-		size_t	i = 0;
-		vProperties[  i] = CProperty( XN_STREAM_PROPERTY_CONST_SHIFT			, 8		, "XN_STREAM_PROPERTY_CONST_SHIFT"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_PARAM_COEFF			, 8		, "XN_STREAM_PROPERTY_PARAM_COEFF"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_SHIFT_SCALE			, 8		, "XN_STREAM_PROPERTY_SHIFT_SCALE"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_MAX_SHIFT				, 8		, "XN_STREAM_PROPERTY_MAX_SHIFT"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_S2D_TABLE				, 4096	, "XN_STREAM_PROPERTY_S2D_TABLE"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_D2S_TABLE				, 20002	, "XN_STREAM_PROPERTY_D2S_TABLE"				);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE	, 8		, "XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE"		);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE	, 8		, "XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE"	);
-		vProperties[++i] = CProperty( XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE	, 8		, "XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE"	);
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_CONST_SHIFT			, 8		, "XN_STREAM_PROPERTY_CONST_SHIFT"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_PARAM_COEFF			, 8		, "XN_STREAM_PROPERTY_PARAM_COEFF"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_SHIFT_SCALE			, 8		, "XN_STREAM_PROPERTY_SHIFT_SCALE"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_MAX_SHIFT				, 8		, "XN_STREAM_PROPERTY_MAX_SHIFT"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_S2D_TABLE				, 4096	, "XN_STREAM_PROPERTY_S2D_TABLE"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_D2S_TABLE				, 20002	, "XN_STREAM_PROPERTY_D2S_TABLE"				) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE	, 8		, "XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE"		) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE	, 8		, "XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE"	) );
+		vProperties.push_back( CProperty( XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE	, 8		, "XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE"	) );
 	}
 
 	bool LoadProperties( const VideoStream& rStream, bool bOverwrite = false )
@@ -120,12 +191,26 @@ protected:
 		int		iIdx;
 		string	sName;
 		bool	bLoad;
-		std::vector<char>	vData;
+		vector<char>	vData;
 	};
 
 protected:
-	array<CProperty,9>	vProperties;
+	vector<CProperty>	vProperties;
 };
+
+void CopyGeneralProperties( const VideoStream& rSource, VideoStream& rTarget )
+{
+	rTarget.setVideoMode( rSource.getVideoMode() );
+
+	// assign basic properties
+	rTarget.setProperty( ONI_STREAM_PROPERTY_VERTICAL_FOV,		rSource.getVerticalFieldOfView() );
+	rTarget.setProperty( ONI_STREAM_PROPERTY_HORIZONTAL_FOV,	rSource.getHorizontalFieldOfView() );
+	rTarget.setProperty( ONI_STREAM_PROPERTY_MIRRORING,			rSource.getMirroringEnabled() );
+
+	// assign dpeth only properties
+	rTarget.setProperty( ONI_STREAM_PROPERTY_MIN_VALUE,			rSource.getMinPixelValue() );
+	rTarget.setProperty( ONI_STREAM_PROPERTY_MAX_VALUE,			rSource.getMaxPixelValue() );
+}
 
 int main( int argc, char** argv )
 {
@@ -152,33 +237,33 @@ int main( int argc, char** argv )
 	CNiTEProperty	mNiTEProp;
 
 	#pragma region Open and check source file
-	// Open source file
-	cout << "Open the ONI file: " << sSource << endl;
-	Device	devSourceFile;
-	if( devSourceFile.open( sSource.c_str() ) != STATUS_OK )
+	CNIDevice	mOniFile;
+	if( !mOniFile.OpenDevice( sSource.c_str() ) )
 	{
-		cerr << "Can't open source file: " << OpenNI::getExtendedError() << endl;
+		cerr << "Can't open ONI file" << endl;
 		return -1;
 	}
 
-	// Create depth stream
-	VideoStream vsSourceDepth;
-	if( devSourceFile.hasSensor( SENSOR_DEPTH ) )
+	// create Playback controller
+	PlaybackControl* pPlay = mOniFile.mDeivce.getPlaybackControl();
+	int	iDepthFrameNum, iColorFrameNum;
+	if( pPlay != nullptr )
 	{
-		if( vsSourceDepth.create( devSourceFile, SENSOR_DEPTH ) != STATUS_OK )
-		{
-			cerr << "Can't create depth stream: " << OpenNI::getExtendedError() << endl;
-			return -1;
-		}
+		pPlay->setRepeatEnabled( false );
+		pPlay->setSpeed( 0.0f );
+	
+		iDepthFrameNum = pPlay->getNumberOfFrames( mOniFile.vsDepth );
+		iColorFrameNum = pPlay->getNumberOfFrames( mOniFile.vsColor );
+		cout << "This oni file have: " << iDepthFrameNum << " frames dpeth, " << iColorFrameNum << " frames color" << endl;
 	}
 	else
 	{
-		cerr << "ERROR: This source file does not have depth sensor" << endl;
+		cerr << "Can't get playback controller, this may not a vaild oni file?" << endl;
 		return -1;
 	}
 
 	// check NiTE required property
-	if( mNiTEProp.LoadProperties( vsSourceDepth ) )
+	if( mNiTEProp.LoadProperties( mOniFile.vsDepth ) )
 	{
 		cout << "All required properties works, don't need to fix" << endl;
 		return 0;
@@ -187,107 +272,64 @@ int main( int argc, char** argv )
 
 	#pragma region Create a physical device to read property
 	cout << "\nOpen a physical device to read property" << endl;
-
-	Device devRealDevice;
-	if( devRealDevice.open( ANY_DEVICE ) != STATUS_OK )
+	CNIDevice mPhysical;
+	if( !mPhysical.OpenDevice( ANY_DEVICE, true ) )
 	{
-		cerr << "Can't open real device: " << OpenNI::getExtendedError() << endl;
-		return -1;
-	}
-
-	VideoStream vsRealDepth;
-	if( devRealDevice.hasSensor( SENSOR_DEPTH ) )
-	{
-		if( vsRealDepth.create( devRealDevice, SENSOR_DEPTH ) != STATUS_OK )
-		{
-			cerr << "Can't create depth stream: " << OpenNI::getExtendedError() << endl;
-			return -1;
-		}
-	}
-	else
-	{
-		cerr << "ERROR: This source file does not have depth sensor" << endl;
+		cerr << "Can't open physical device: " << OpenNI::getExtendedError() << endl;
 		return -1;
 	}
 
 	// try to load property
-	if( !mNiTEProp.LoadProperties( vsRealDepth ) )
+	if( !mNiTEProp.LoadProperties( mPhysical.vsDepth ) )
 	{
 		cout << "Can't prepare all required properties" << endl;
 		return -1;
 	}
-
-	vsRealDepth.destroy();
-	devRealDevice.close();
+	mPhysical.Close();
 	#pragma endregion
 
 	#pragma region Create a virtual device to record
-	cout << "\nCreate a virtual device to record" << endl;
-
-	// create virtual device
-	Device devVirDevice;
-	if( devVirDevice.open( "\\OpenNI2\\VirtualDevice\\PS1080" ) != STATUS_OK )
-	{
-		cerr << "Can't open virtual device: " << OpenNI::getExtendedError() << endl;
-		return -1;
-	}
-
-	// create virtual depth stream
-	VideoStream vsVirDepth;
-	if( vsVirDepth.create( devVirDevice, SENSOR_DEPTH ) != STATUS_OK )
-	{
-		cerr << "Can't create depth stream: " << OpenNI::getExtendedError() << endl;
-		return -1;
-	}
-
-	// assign basic properties
-	vsVirDepth.setProperty( ONI_STREAM_PROPERTY_VERTICAL_FOV,	vsSourceDepth.getVerticalFieldOfView() );
-	vsVirDepth.setProperty( ONI_STREAM_PROPERTY_HORIZONTAL_FOV,	vsSourceDepth.getHorizontalFieldOfView() );
-	vsVirDepth.setProperty( ONI_STREAM_PROPERTY_MIRRORING,		vsSourceDepth.getMirroringEnabled() );
-
-	// assign dpeth only properties
-	vsVirDepth.setProperty( ONI_STREAM_PROPERTY_MIN_VALUE,		vsSourceDepth.getMinPixelValue() );
-	vsVirDepth.setProperty( ONI_STREAM_PROPERTY_MAX_VALUE,		vsSourceDepth.getMaxPixelValue() );
-
-	// assign NiTE required properties
-	mNiTEProp.WriteProperties( vsVirDepth );
-
-	// set VideoMode
-	vsVirDepth.setVideoMode( vsSourceDepth.getVideoMode() );
-
-	// add listener for update frame
-	vsSourceDepth.addNewFrameListener( new CFrameCopy( vsVirDepth ) );
-
-	//TODO: Check if color is required
-
-	#pragma endregion
-
 	// create recorder
 	Recorder mRecorder;
 	mRecorder.create( sTarget.c_str() );
-	mRecorder.attach( vsVirDepth );
 
-	// create Playback controller
-	PlaybackControl* pPlay = devSourceFile.getPlaybackControl();
-	pPlay->setRepeatEnabled( false );
-	pPlay->setSpeed( 0.0f );
-	int iFrameNum = pPlay->getNumberOfFrames(vsSourceDepth);
+	// create virtual device
+	cout << "\nCreate a virtual device to record" << endl;
+	CNIDevice mVirtual;
+	if( !mVirtual.OpenDevice( "\\OpenNI2\\VirtualDevice\\PS1080", !(mOniFile.vsColor.isValid()) ) )
+	{
+		cerr << "Can't create virtual device" << endl;
+		return -1;
+	}
+
+	// copy depth stream properties
+	CopyGeneralProperties( mOniFile.vsDepth, mVirtual.vsDepth );
+	mNiTEProp.WriteProperties( mVirtual.vsDepth );
+	mOniFile.vsDepth.addNewFrameListener( new CFrameCopy( mVirtual.vsDepth ) );
+	mRecorder.attach( mVirtual.vsDepth );
+
+	// copy color stream properties
+	if( mOniFile.vsColor.isValid() )
+	{
+		CopyGeneralProperties( mOniFile.vsColor, mVirtual.vsColor );
+		mOniFile.vsColor.addNewFrameListener( new CFrameCopy( mVirtual.vsColor ) );
+		mRecorder.attach( mVirtual.vsColor );
+	}
+	#pragma endregion
 
 	// start
 	cout << "Start to re-recorder\n";
-	cout << "There are " << iFrameNum << " frames in dpeth" << endl;
-
 	mRecorder.start();
-	vsSourceDepth.start();
-	vsVirDepth.start();
-	int i = 0;
+	mVirtual.Start();
+	mOniFile.Start();
+	int iDepth = 0, iColor= 0;
 	while( true )
 	{
-		pPlay->seek( vsSourceDepth, ++i );
-		VideoFrameRef vfFrame;
-		vsVirDepth.readFrame( &vfFrame );
+		pPlay->seek( mOniFile.vsDepth, ++iDepth );
+		//pPlay->seek( mOniFile.vsColor, ++iColor );
+
 		cout << "." << flush;
-		if( i == iFrameNum )
+		if( iDepth >= iDepthFrameNum || iColor >= iColorFrameNum )
 			break;
 	}
 	cout << "Done" << endl;
@@ -295,13 +337,8 @@ int main( int argc, char** argv )
 	// stop
 	mRecorder.stop();
 	
-	vsVirDepth.stop();
-	vsVirDepth.destroy();
-	devVirDevice.close();
-
-	vsSourceDepth.stop();
-	vsSourceDepth.destroy();
-	devSourceFile.close();
+	mVirtual.Close();
+	mOniFile.Close();
 
 	OpenNI::shutdown();
 }
