@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <vector>
 
 // OpenNI Header
 #include <OpenNI.h>
@@ -73,7 +74,8 @@ public:
 			if( bOverwrite || !rProp.bLoad )
 			{
 				cout << "Try load " << rProp.sName << "\t-> ";
-				if( rStream.getProperty( rProp.iIdx, rProp.pData, &rProp.iSize ) == STATUS_OK )
+				int iSize = rProp.vData.size();
+				if( rStream.getProperty( rProp.iIdx, rProp.vData.data(), &iSize ) == STATUS_OK )
 				{
 					rProp.bLoad = true;
 					cout << "OK";
@@ -94,7 +96,8 @@ public:
 	void WriteProperties( VideoStream& rStream )
 	{
 		for_each( vProperties.begin(), vProperties.end(), [&rStream]( CProperty& rProp ){
-			if( rStream.setProperty( rProp.iIdx, rProp.pData, rProp.iSize ) != STATUS_OK )
+			int iSize = rProp.vData.size();
+			if( rStream.setProperty( rProp.iIdx, rProp.vData.data(), iSize ) != STATUS_OK )
 			{
 				cerr << "Property " << rProp.sName << " write fail" << endl;
 			}
@@ -109,17 +112,15 @@ protected:
 		CProperty( int idx, int size, string name )
 		{
 			iIdx	= idx;
-			iSize	= size;
 			sName	= name;
-			pData	= new char[iSize];
 			bLoad	= false;
+			vData.resize(size);
 		}
 	
 		int		iIdx;
-		int		iSize;
 		string	sName;
-		char*	pData;
 		bool	bLoad;
+		std::vector<char>	vData;
 	};
 
 protected:
@@ -141,7 +142,7 @@ int main( int argc, char** argv )
 	}
 	#pragma endregion
 
-	// Initial OpenNI
+	// Initial OpenNI 
 	if( OpenNI::initialize() != STATUS_OK )
 	{
 		cerr << "OpenNI Initial Error: " << OpenNI::getExtendedError() << endl;
@@ -269,7 +270,7 @@ int main( int argc, char** argv )
 	// create Playback controller
 	PlaybackControl* pPlay = devSourceFile.getPlaybackControl();
 	pPlay->setRepeatEnabled( false );
-	pPlay->setSpeed( 1.0f );
+	pPlay->setSpeed( 0.0f );
 	int iFrameNum = pPlay->getNumberOfFrames(vsSourceDepth);
 
 	// start
@@ -279,14 +280,17 @@ int main( int argc, char** argv )
 	mRecorder.start();
 	vsSourceDepth.start();
 	vsVirDepth.start();
+	int i = 0;
 	while( true )
 	{
+		pPlay->seek( vsSourceDepth, ++i );
 		VideoFrameRef vfFrame;
 		vsVirDepth.readFrame( &vfFrame );
 		cout << "." << flush;
-		if( vfFrame.getFrameIndex() == iFrameNum )
+		if( i == iFrameNum )
 			break;
 	}
+	cout << "Done" << endl;
 
 	// stop
 	mRecorder.stop();
