@@ -78,7 +78,16 @@ public:
 			vsDepth.start();
 
 		if( vsColor.isValid() )
-			vsDepth.start();
+			vsColor.start();
+	}
+
+	void Stop()
+	{
+		if( vsDepth.isValid() )
+			vsDepth.stop();
+
+		if( vsColor.isValid() )
+			vsColor.stop();
 	}
 
 public:
@@ -113,7 +122,16 @@ public:
 				// write data to form virtual video stream
 				m_rVStream.invoke( SET_VIRTUAL_STREAM_IMAGE, pFrame );
 			}
+			else
+			{
+				cerr << "Frame error!" << endl;
+			}
 		}
+		else
+		{
+			cerr << "Frame error!" << endl;
+		}
+		mFrame.release();
 	}
 
 protected:
@@ -251,7 +269,7 @@ int main( int argc, char** argv )
 	{
 		pPlay->setRepeatEnabled( false );
 		pPlay->setSpeed( 0.0f );
-	
+
 		iDepthFrameNum = pPlay->getNumberOfFrames( mOniFile.vsDepth );
 		iColorFrameNum = pPlay->getNumberOfFrames( mOniFile.vsColor );
 		cout << "This oni file have: " << iDepthFrameNum << " frames dpeth, " << iColorFrameNum << " frames color" << endl;
@@ -309,7 +327,7 @@ int main( int argc, char** argv )
 	mRecorder.attach( mVirtual.vsDepth );
 
 	// copy color stream properties
-	if( mOniFile.vsColor.isValid() )
+	if( mVirtual.vsColor.isValid() )
 	{
 		CopyGeneralProperties( mOniFile.vsColor, mVirtual.vsColor );
 		mOniFile.vsColor.addNewFrameListener( new CFrameCopy( mVirtual.vsColor ) );
@@ -322,6 +340,7 @@ int main( int argc, char** argv )
 	mRecorder.start();
 	mVirtual.Start();
 	mOniFile.Start();
+
 	int iDepth = 0, iColor= 0;
 	while( true )
 	{
@@ -336,9 +355,11 @@ int main( int argc, char** argv )
 
 	// stop
 	mRecorder.stop();
-	
-	mVirtual.Close();
+	mOniFile.Stop();
+	mVirtual.Stop();
+
 	mOniFile.Close();
+	mVirtual.Close();
 
 	OpenNI::shutdown();
 }
