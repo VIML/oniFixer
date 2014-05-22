@@ -67,7 +67,7 @@ public:
 			vsDepth.destroy();
 
 		if( vsColor.isValid() )
-			vsDepth.destroy();
+			vsColor.destroy();
 
 		mDeivce.close();
 	}
@@ -122,14 +122,6 @@ public:
 				// write data to form virtual video stream
 				m_rVStream.invoke( SET_VIRTUAL_STREAM_IMAGE, pFrame );
 			}
-			else
-			{
-				cerr << "Frame error!" << endl;
-			}
-		}
-		else
-		{
-			cerr << "Frame error!" << endl;
 		}
 		mFrame.release();
 	}
@@ -305,7 +297,7 @@ int main( int argc, char** argv )
 	}
 	mPhysical.Close();
 	#pragma endregion
-
+	
 	#pragma region Create a virtual device to record
 	// create recorder
 	Recorder mRecorder;
@@ -341,18 +333,17 @@ int main( int argc, char** argv )
 	mVirtual.Start();
 	mOniFile.Start();
 
-	int iDepth = 0, iColor= 0;
+	int iDepth = 0;
 	while( true )
 	{
 		pPlay->seek( mOniFile.vsDepth, ++iDepth );
-		//pPlay->seek( mOniFile.vsColor, ++iColor );
 
 		cout << "." << flush;
-		if( iDepth >= iDepthFrameNum || iColor >= iColorFrameNum )
+		if( iDepth >= iDepthFrameNum )
 			break;
 	}
 	cout << "Done" << endl;
-
+	
 	// stop
 	mRecorder.stop();
 	mOniFile.Stop();
