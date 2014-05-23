@@ -1,7 +1,6 @@
 /**
- * This is a simple example to show how to use the virtual device.
- * This sample will open an existed real device, read the depth frame with listener,
- * then copy to the virtual device.
+ * oniFixer is a small program to fix the ONI file that don't have required properties for NiTE.
+ * Please see https://github.com/VIML/oniFixer for more detail
  *
  * http://viml.nchc.org.tw/home/
  */
