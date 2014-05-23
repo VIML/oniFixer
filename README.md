@@ -1,6 +1,8 @@
 oniFixer
 ========
 
+Chinese version: http://viml.nchc.org.tw/blog/paper_info.php?CLASS_ID=1&SUB_ID=1&PAPER_ID=533
+
 Question
 --------
 When using Microsoft Kinect sensor with lastest OpenNI(2.2) and NiTE(2.2), user may have problem using recorded oni file.
