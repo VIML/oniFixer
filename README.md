@@ -29,6 +29,13 @@ oniFixer.exe old.oni new.oni
 
 The new.oni should work again!
 
+Notice: oniFixer need to open a physical device to load the required properties.
+
+Download
+--------
+You can download pre-compiled binary here
+https://github.com/VIML/oniFixer/releases
+
 Issue
 --------
 - No compression of lossy color stream, the file may be very large
